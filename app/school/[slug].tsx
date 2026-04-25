@@ -1,20 +1,75 @@
+import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { communitySections, getSchoolBySlug, schoolNotes } from '@/src/constants/schools';
+import { communitySections, getSchoolBySlug, schoolNotes, schoolSlugs } from '@/src/constants/schools';
 import { campfireTheme } from '@/src/constants/theme';
+import { isSupabaseConfigured, supabase } from '@/src/lib/supabase';
 
-const samplePosts = [
-  'Share a class tip or professor recommendation.',
-  'Ask about housing, roommates, or neighborhood leads.',
-  'Promote a meetup, club event, or student announcement.',
-] as const;
+type CommunitySection = {
+  description: string;
+  title: string;
+};
+
+type SchoolPost = {
+  body: string;
+  heat_score: number;
+  title: string;
+};
 
 export default function SchoolCommunityScreen() {
   const { slug } = useLocalSearchParams<{ slug?: string }>();
   const insets = useSafeAreaInsets();
   const school = getSchoolBySlug(slug);
+  const [remoteSections, setRemoteSections] = useState<CommunitySection[]>(communitySections);
+  const [posts, setPosts] = useState<SchoolPost[]>([]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !school) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadCommunity() {
+      const [{ data: sectionsData }, { data: postsData }] = await Promise.all([
+        supabase
+          .from('community_sections')
+          .select('title, description')
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('school_posts')
+          .select('title, body, heat_score, schools!inner(slug)')
+          .eq('schools.slug', schoolSlugs[school])
+          .order('created_at', { ascending: false }),
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (sectionsData) {
+        setRemoteSections(sectionsData);
+      }
+
+      if (postsData) {
+        setPosts(
+          postsData.map((post) => ({
+            body: post.body,
+            heat_score: post.heat_score,
+            title: post.title,
+          }))
+        );
+      }
+    }
+
+    loadCommunity();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [school]);
 
   if (!school) {
     return (
@@ -59,7 +114,7 @@ export default function SchoolCommunityScreen() {
       </View>
 
       <View style={styles.sectionList}>
-        {communitySections.map((section) => (
+        {remoteSections.map((section) => (
           <View key={section.title} style={styles.sectionCard}>
             <Text style={styles.cardTitle}>{section.title}</Text>
             <Text style={styles.cardDescription}>{section.description}</Text>
@@ -69,12 +124,20 @@ export default function SchoolCommunityScreen() {
 
       <View style={styles.postCard}>
         <Text style={styles.postKicker}>Latest activity preview</Text>
-        {samplePosts.map((post) => (
-          <View key={post} style={styles.postRow}>
-            <View style={styles.postDot} />
-            <Text style={styles.postText}>{post}</Text>
-          </View>
-        ))}
+        {posts.length > 0 ? (
+          posts.map((post) => (
+            <View key={post.title} style={styles.postRow}>
+              <View style={styles.postDot} />
+              <View style={styles.postCopy}>
+                <Text style={styles.postTitle}>{post.title}</Text>
+                <Text style={styles.postText}>{post.body}</Text>
+                <Text style={styles.postHeat}>{post.heat_score} heat</Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.postText}>No posts yet. Start this board with a class tip, housing lead, or event.</Text>
+        )}
       </View>
     </ScrollView>
   );
@@ -195,6 +258,21 @@ const styles = StyleSheet.create({
     color: campfireTheme.colors.mutedInk,
     fontSize: 14,
     lineHeight: 20,
+  },
+  postCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  postTitle: {
+    color: campfireTheme.colors.ink,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  postHeat: {
+    color: campfireTheme.colors.hotPink,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
   emptyCard: {
     gap: 8,
