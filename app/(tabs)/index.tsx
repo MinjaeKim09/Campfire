@@ -49,6 +49,8 @@ export default function HomeScreen() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<PostCategory | null>(null);
+  const [sortMode, setSortMode] = useState<'recent' | 'trending'>('recent');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   const mySchool = profile?.school ?? null;
 
@@ -56,12 +58,53 @@ export default function HomeScreen() {
     setLoading(true);
     const targetVisibility = mySchool ?? ALL_CAMPUSES;
 
-    const { data: postRows } = await supabase
-      .from('posts')
-      .select('id, author_id, title, body, category, visibility, created_at')
-      .eq('visibility', targetVisibility)
-      .order('created_at', { ascending: false })
-      .limit(100);
+    let postRows: {
+      id: string;
+      author_id: string;
+      title: string;
+      body: string;
+      category: string;
+      visibility: string;
+      created_at: string;
+    }[] | null = null;
+
+    let trendingScore: Map<string, number> | null = null;
+
+    if (sortMode === 'trending') {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentLikes } = await supabase
+        .from('likes')
+        .select('post_id')
+        .gte('created_at', dayAgo);
+      trendingScore = new Map();
+      (recentLikes ?? []).forEach((r) => {
+        trendingScore!.set(r.post_id, (trendingScore!.get(r.post_id) ?? 0) + 1);
+      });
+      const trendingIds = [...trendingScore.keys()];
+      if (trendingIds.length === 0) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('posts')
+        .select('id, author_id, title, body, category, visibility, created_at')
+        .eq('visibility', targetVisibility)
+        .in('id', trendingIds)
+        .limit(100);
+      postRows = data ?? null;
+      postRows?.sort(
+        (a, b) => (trendingScore!.get(b.id) ?? 0) - (trendingScore!.get(a.id) ?? 0)
+      );
+    } else {
+      const { data } = await supabase
+        .from('posts')
+        .select('id, author_id, title, body, category, visibility, created_at')
+        .eq('visibility', targetVisibility)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      postRows = data ?? null;
+    }
 
     if (!postRows) {
       setPosts([]);
@@ -100,7 +143,7 @@ export default function HomeScreen() {
       }))
     );
     setLoading(false);
-  }, [mySchool, user]);
+  }, [mySchool, user, sortMode]);
 
   useFocusEffect(
     useCallback(() => {
@@ -192,9 +235,66 @@ export default function HomeScreen() {
         );
       })()}
 
-      <Text style={styles.feedKicker}>
-        {mySchool ? `${mySchool} only` : 'All campuses only'}
-      </Text>
+      <View style={styles.toolbarRow}>
+        <Text style={styles.feedKicker}>
+          {mySchool ? `${mySchool} only` : 'All campuses only'}
+        </Text>
+        <View>
+          <Pressable
+            onPress={() => setSortMenuOpen((o) => !o)}
+            style={styles.sortBtn}>
+            <Ionicons
+              name={sortMode === 'trending' ? 'flame' : 'time-outline'}
+              size={14}
+              color={campfireTheme.colors.ink}
+            />
+            <Text style={styles.sortBtnText}>
+              {sortMode === 'trending' ? 'Trending' : 'Recent'}
+            </Text>
+            <Ionicons
+              name={sortMenuOpen ? 'chevron-up' : 'chevron-down'}
+              size={14}
+              color={campfireTheme.colors.ink}
+            />
+          </Pressable>
+          {sortMenuOpen && (
+            <View style={styles.sortMenu}>
+              {(['recent', 'trending'] as const).map((m) => {
+                const active = sortMode === m;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => {
+                      setSortMode(m);
+                      setSortMenuOpen(false);
+                    }}
+                    style={[styles.sortItem, active && styles.sortItemActive]}>
+                    <Ionicons
+                      name={m === 'trending' ? 'flame' : 'time-outline'}
+                      size={14}
+                      color={active ? campfireTheme.colors.hotPink : campfireTheme.colors.ink}
+                    />
+                    <Text
+                      style={[
+                        styles.sortItemText,
+                        active && { color: campfireTheme.colors.hotPink, fontWeight: '900' },
+                      ]}>
+                      {m === 'trending' ? 'Trending (24h)' : 'Recent'}
+                    </Text>
+                    {active && (
+                      <Ionicons
+                        name="checkmark"
+                        size={14}
+                        color={campfireTheme.colors.hotPink}
+                      />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={styles.filterRow}>
@@ -373,7 +473,61 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
     color: campfireTheme.colors.mutedInk,
+  },
+  toolbarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 4,
+  },
+  sortBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: campfireTheme.colors.card,
+    borderWidth: 1,
+    borderColor: campfireTheme.colors.border,
+    borderRadius: campfireTheme.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  sortBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: campfireTheme.colors.ink,
+  },
+  sortMenu: {
+    position: 'absolute',
+    top: 36,
+    right: 0,
+    minWidth: 170,
+    backgroundColor: campfireTheme.colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: campfireTheme.colors.border,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    zIndex: 10,
+  },
+  sortItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  sortItemActive: {
+    backgroundColor: campfireTheme.colors.cardMuted,
+  },
+  sortItemText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: campfireTheme.colors.ink,
   },
   filterRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
   filterChip: {
