@@ -9,27 +9,27 @@ export const schools = [
 
 export const communitySections = [
   {
-    title: '꿀교양 / 꿀수업',
+    title: 'Easy electives / class tips',
     description: 'Professor and easy elective recommendations by school.',
   },
   {
-    title: '학교별 커뮤니티',
+    title: 'School communities',
     description: 'School-specific boards plus one all-campus community.',
   },
   {
-    title: '서블렛 / 룸메이트',
+    title: 'Sublets / roommates',
     description: 'Housing leads, roommate matches, and short-term sublets.',
   },
   {
-    title: '동아리',
+    title: 'Clubs',
     description: 'Club discovery for Korean and international students.',
   },
   {
-    title: '학교 행사',
+    title: 'Campus events',
     description: 'Campus events, meetups, and student-run announcements.',
   },
   {
-    title: '한인회 홍보 / 행사',
+    title: 'KSA promotions / events',
     description: 'KSA promotions, gatherings, and community notices.',
   },
 ] as const;

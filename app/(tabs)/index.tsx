@@ -1,11 +1,19 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { communitySections } from '@/src/constants/schools';
 import { campfireTheme, heatScale } from '@/src/constants/theme';
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + campfireTheme.spacing.screen },
+      ]}>
       <View style={styles.hero}>
         <View style={styles.heroTopRow}>
           <Text style={styles.kicker}>Campfire beta</Text>
@@ -13,7 +21,7 @@ export default function HomeScreen() {
         </View>
         <Text style={styles.title}>A cozy campus board for Korean students in NYC.</Text>
         <Text style={styles.subtitle}>
-          학교별 꿀수업, 커뮤니티, 룸메이트, 동아리, 행사 소식을 한 곳에 모아요.
+          Find class tips, school communities, roommates, clubs, and campus events in one place.
         </Text>
       </View>
 

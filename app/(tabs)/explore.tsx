@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isSupabaseConfigured } from '@/src/lib/supabase';
 import { campfireTheme } from '@/src/constants/theme';
@@ -11,8 +12,15 @@ const roadmap = [
 ] as const;
 
 export default function TabTwoScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: insets.top + campfireTheme.spacing.screen },
+      ]}>
       <View style={styles.header}>
         <Text style={styles.kicker}>Explore</Text>
         <Text style={styles.title}>The first scaffold is ready for product decisions.</Text>
