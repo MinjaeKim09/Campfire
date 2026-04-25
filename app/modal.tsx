@@ -18,22 +18,23 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import {
   ALL_CAMPUSES,
   postCategories,
-  schools,
+  schoolColors,
   type PostCategory,
+  type School,
   type Visibility,
 } from '@/src/constants/schools';
 import { campfireTheme } from '@/src/constants/theme';
 import { supabase } from '@/src/lib/supabase';
 
-const visibilityOptions: Visibility[] = [ALL_CAMPUSES, ...schools];
-
 export default function PostComposerModal() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const mySchool = profile?.school ?? null;
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [category, setCategory] = useState<PostCategory | null>(null);
   const [visibility, setVisibility] = useState<Visibility>(ALL_CAMPUSES);
+  const [anonymous, setAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const canPost =
@@ -52,6 +53,7 @@ export default function PostComposerModal() {
       body: body.trim(),
       category,
       visibility,
+      anonymous,
     });
     setSubmitting(false);
     if (error) {
@@ -129,29 +131,82 @@ export default function PostComposerModal() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Visible to</Text>
           <View style={styles.chipRow}>
-            {visibilityOptions.map((v) => {
-              const selected = visibility === v;
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  key={v}
-                  onPress={() => setVisibility(v)}
-                  style={[
-                    styles.chip,
-                    selected && styles.visibilityChipSelected,
-                  ]}>
-                  <Text
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setVisibility(ALL_CAMPUSES)}
+              style={[
+                styles.chip,
+                visibility === ALL_CAMPUSES && styles.visibilityChipSelected,
+              ]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  visibility === ALL_CAMPUSES && styles.visibilityChipTextSelected,
+                ]}>
+                All campuses
+              </Text>
+            </Pressable>
+
+            {mySchool ? (
+              (() => {
+                const selected = visibility === mySchool;
+                const color = schoolColors[mySchool as School];
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setVisibility(mySchool as Visibility)}
                     style={[
-                      styles.chipText,
-                      selected && styles.visibilityChipTextSelected,
+                      styles.chip,
+                      selected && {
+                        backgroundColor: color.bg,
+                        borderColor: color.bg,
+                      },
                     ]}>
-                    {v}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected && { color: color.fg },
+                      ]}>
+                      My school · {mySchool}
+                    </Text>
+                  </Pressable>
+                );
+              })()
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/pick-school')}
+                style={[styles.chip, styles.chipMuted]}>
+                <Text style={styles.chipMutedText}>Set your school</Text>
+              </Pressable>
+            )}
           </View>
         </View>
+
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: anonymous }}
+          onPress={() => setAnonymous((v) => !v)}
+          style={styles.anonRow}>
+          <View style={styles.anonLeft}>
+            <Ionicons
+              name={anonymous ? 'eye-off' : 'eye-off-outline'}
+              size={20}
+              color={anonymous ? campfireTheme.colors.hotPink : campfireTheme.colors.ink}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.anonLabel}>Post anonymously</Text>
+              <Text style={styles.anonHint}>
+                {anonymous
+                  ? 'Shown as Anonymous to others.'
+                  : 'Your name will be shown.'}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.toggle, anonymous && styles.toggleOn]}>
+            <View style={[styles.toggleKnob, anonymous && styles.toggleKnobOn]} />
+          </View>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -260,5 +315,63 @@ const styles = StyleSheet.create({
   },
   visibilityChipTextSelected: {
     color: campfireTheme.colors.card,
+  },
+  chipMuted: {
+    backgroundColor: campfireTheme.colors.cardMuted,
+    borderColor: campfireTheme.colors.border,
+    borderStyle: 'dashed',
+  },
+  chipMutedText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: campfireTheme.colors.mutedInk,
+  },
+  anonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: campfireTheme.colors.card,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: campfireTheme.colors.border,
+    gap: 12,
+  },
+  anonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  anonLabel: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: campfireTheme.colors.ink,
+  },
+  anonHint: {
+    fontSize: 12,
+    color: campfireTheme.colors.mutedInk,
+    marginTop: 2,
+  },
+  toggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: campfireTheme.colors.border,
+    padding: 3,
+    justifyContent: 'center',
+  },
+  toggleOn: {
+    backgroundColor: campfireTheme.colors.hotPink,
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: campfireTheme.colors.card,
+  },
+  toggleKnobOn: {
+    transform: [{ translateX: 18 }],
   },
 });

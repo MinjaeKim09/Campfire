@@ -6,7 +6,7 @@ import { Platform, Pressable, StyleSheet } from 'react-native';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { campfireTheme } from '@/src/constants/theme';
 
-const TAB_BAR_OFFSET = Platform.select({ ios: 96, android: 88, default: 88 });
+const TAB_BAR_OFFSET = Platform.select({ ios: 32, android: 24, default: 24 });
 
 export function FloatingPostButton() {
   const { session } = useAuth();

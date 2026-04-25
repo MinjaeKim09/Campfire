@@ -3,6 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -14,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ALL_CAMPUSES } from '@/src/constants/schools';
+import { ALL_CAMPUSES, visibilityColor } from '@/src/constants/schools';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { supabase } from '@/src/lib/supabase';
 import { campfireTheme } from '@/src/constants/theme';
@@ -27,6 +28,7 @@ type Post = {
   category: string;
   visibility: string;
   created_at: string;
+  anonymous: boolean;
 };
 
 type Comment = {
@@ -48,7 +50,8 @@ const formatDate = (iso: string) =>
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isAdmin = !!profile?.is_admin;
 
   const [post, setPost] = useState<Post | null>(null);
   const [authorName, setAuthorName] = useState<string | null>(null);
@@ -65,7 +68,7 @@ export default function PostDetailScreen() {
 
     const { data: postRow } = await supabase
       .from('posts')
-      .select('id, author_id, title, body, category, visibility, created_at')
+      .select('id, author_id, title, body, category, visibility, created_at, anonymous')
       .eq('id', id)
       .maybeSingle();
 
@@ -74,7 +77,7 @@ export default function PostDetailScreen() {
       setLoading(false);
       return;
     }
-    setPost(postRow);
+    setPost(postRow as Post);
 
     const [{ data: authorRow }, { data: commentRows }, { data: likeRows }] = await Promise.all([
       supabase.from('profiles').select('display_name, email').eq('id', postRow.author_id).maybeSingle(),
@@ -156,6 +159,45 @@ export default function PostDetailScreen() {
     load();
   };
 
+  const confirmDeletePost = () => {
+    if (!post) return;
+    Alert.alert('Delete post?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.from('posts').delete().eq('id', post.id);
+          if (error) {
+            Alert.alert('Could not delete', error.message);
+            return;
+          }
+          router.back();
+        },
+      },
+    ]);
+  };
+
+  const confirmDeleteComment = (commentId: string) => {
+    Alert.alert('Delete comment?', '', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setComments((prev) => prev.filter((c) => c.id !== commentId));
+          const { error } = await supabase.from('comments').delete().eq('id', commentId);
+          if (error) {
+            Alert.alert('Could not delete', error.message);
+            load();
+          }
+        },
+      },
+    ]);
+  };
+
+  const canDeletePost = !!user && !!post && (user.id === post.author_id || isAdmin);
+
   if (loading && !post) {
     return (
       <View style={[styles.screen, styles.center]}>
@@ -187,7 +229,13 @@ export default function PostDetailScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {post.category}
         </Text>
-        <View style={styles.headerBtn} />
+        {canDeletePost ? (
+          <Pressable hitSlop={10} onPress={confirmDeletePost} style={styles.headerBtn}>
+            <Ionicons name="trash-outline" size={22} color={campfireTheme.colors.emberRed} />
+          </Pressable>
+        ) : (
+          <View style={styles.headerBtn} />
+        )}
       </View>
 
       <ScrollView
@@ -195,25 +243,42 @@ export default function PostDetailScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.postBlock}>
-          <View style={styles.metaRow}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryBadgeText}>{post.category}</Text>
-            </View>
-            <Text style={styles.metaText}>
-              {post.visibility === ALL_CAMPUSES ? 'All campuses' : post.visibility}
-            </Text>
-          </View>
+          {(() => {
+            const vc = visibilityColor(post.visibility);
+            return (
+              <View style={styles.metaRow}>
+                <View style={[styles.categoryBadge, { backgroundColor: vc.bg }]}>
+                  <Text style={[styles.categoryBadgeText, { color: vc.fg }]}>
+                    {post.category}
+                  </Text>
+                </View>
+                <Text style={styles.metaText}>
+                  {post.visibility === ALL_CAMPUSES ? 'All campuses' : post.visibility}
+                </Text>
+              </View>
+            );
+          })()}
 
           <Text style={styles.title}>{post.title}</Text>
 
           <View style={styles.authorRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {(authorName ?? '?').slice(0, 1).toUpperCase()}
-              </Text>
+            <View style={[styles.avatar, post.anonymous && styles.avatarAnon]}>
+              <Ionicons
+                name={post.anonymous ? 'person' : 'person-outline'}
+                size={post.anonymous ? 20 : 0}
+                color={campfireTheme.colors.card}
+                style={post.anonymous ? undefined : { display: 'none' }}
+              />
+              {!post.anonymous ? (
+                <Text style={styles.avatarText}>
+                  {(authorName ?? '?').slice(0, 1).toUpperCase()}
+                </Text>
+              ) : null}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.authorName}>{authorName ?? 'Unknown'}</Text>
+              <Text style={styles.authorName}>
+                {post.anonymous ? 'Anonymous' : (authorName ?? 'Unknown')}
+              </Text>
               <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
             </View>
           </View>
@@ -222,16 +287,16 @@ export default function PostDetailScreen() {
 
           <Pressable onPress={toggleLike} style={styles.likeBtn}>
             <Ionicons
-              name={likedByMe ? 'heart' : 'heart-outline'}
+              name={likedByMe ? 'flame' : 'flame-outline'}
               size={20}
-              color={likedByMe ? campfireTheme.colors.hotPink : campfireTheme.colors.mutedInk}
+              color={likedByMe ? campfireTheme.colors.emberOrange : campfireTheme.colors.mutedInk}
             />
             <Text
               style={[
                 styles.likeText,
-                likedByMe && { color: campfireTheme.colors.hotPink },
+                likedByMe && { color: campfireTheme.colors.emberOrange },
               ]}>
-              {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+              {likeCount} {likeCount === 1 ? 'fire' : 'fires'}
             </Text>
           </Pressable>
         </View>
@@ -246,22 +311,37 @@ export default function PostDetailScreen() {
           <Text style={styles.emptyComments}>Be the first to comment.</Text>
         ) : (
           <View style={styles.commentList}>
-            {comments.map((c) => (
-              <View key={c.id} style={styles.commentRow}>
-                <View style={styles.commentAvatar}>
-                  <Text style={styles.commentAvatarText}>
-                    {(c.author_name ?? '?').slice(0, 1).toUpperCase()}
-                  </Text>
+            {comments.map((c) => {
+              const canDelete = !!user && (c.author_id === user.id || isAdmin);
+              return (
+                <View key={c.id} style={styles.commentRow}>
+                  <View style={styles.commentAvatar}>
+                    <Text style={styles.commentAvatarText}>
+                      {(c.author_name ?? '?').slice(0, 1).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.commentAuthor}>
+                      {c.author_name ?? 'Unknown'}{' '}
+                      <Text style={styles.commentDate}>· {formatDate(c.created_at)}</Text>
+                    </Text>
+                    <Text style={styles.commentBody}>{c.body}</Text>
+                  </View>
+                  {canDelete ? (
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => confirmDeleteComment(c.id)}
+                      style={styles.commentDeleteBtn}>
+                      <Ionicons
+                        name="trash-outline"
+                        size={16}
+                        color={campfireTheme.colors.mutedInk}
+                      />
+                    </Pressable>
+                  ) : null}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.commentAuthor}>
-                    {c.author_name ?? 'Unknown'}{' '}
-                    <Text style={styles.commentDate}>· {formatDate(c.created_at)}</Text>
-                  </Text>
-                  <Text style={styles.commentBody}>{c.body}</Text>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -364,6 +444,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: campfireTheme.colors.card, fontWeight: '900', fontSize: 14 },
+  avatarAnon: { backgroundColor: campfireTheme.colors.mutedInk },
   authorName: { fontSize: 14, fontWeight: '800', color: campfireTheme.colors.ink },
   dateText: { fontSize: 12, color: campfireTheme.colors.mutedInk },
   body: { fontSize: 16, lineHeight: 24, color: campfireTheme.colors.ink, marginTop: 4 },
@@ -401,6 +482,7 @@ const styles = StyleSheet.create({
   commentAuthor: { fontSize: 13, fontWeight: '800', color: campfireTheme.colors.ink },
   commentDate: { fontWeight: '500', color: campfireTheme.colors.mutedInk },
   commentBody: { fontSize: 14, lineHeight: 20, color: campfireTheme.colors.ink, marginTop: 2 },
+  commentDeleteBtn: { paddingHorizontal: 6, paddingVertical: 4 },
   composer: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -18,6 +18,8 @@ type AuthContextValue = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  setSchool: (school: string | null) => Promise<{ error: string | null }>;
+  setDisplayName: (name: string) => Promise<{ error: string | null }>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -76,6 +78,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         await supabase.auth.signOut();
+      },
+      setSchool: async (school) => {
+        if (!session?.user) return { error: 'Not signed in' };
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ school })
+          .eq('id', session.user.id)
+          .select('id, email, display_name, school, is_admin')
+          .maybeSingle();
+        if (error) return { error: error.message };
+        if (data) setProfile(data as Profile);
+        return { error: null };
+      },
+      setDisplayName: async (name) => {
+        if (!session?.user) return { error: 'Not signed in' };
+        const trimmed = name.trim();
+        if (!trimmed) return { error: 'Name cannot be empty' };
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({ display_name: trimmed })
+          .eq('id', session.user.id)
+          .select('id, email, display_name, school, is_admin')
+          .maybeSingle();
+        if (error) return { error: error.message };
+        if (data) setProfile(data as Profile);
+        return { error: null };
       },
     }),
     [session, profile, loading]

@@ -61,6 +61,7 @@ export const communitySections = [
 ] as const;
 
 export const postCategories = [
+  'All',
   'Class tips',
   'School community',
   'Sublets',
@@ -72,3 +73,19 @@ export type PostCategory = (typeof postCategories)[number];
 
 export const ALL_CAMPUSES = 'All campuses' as const;
 export type Visibility = typeof ALL_CAMPUSES | School;
+
+export const schoolColors: Record<School, { bg: string; fg: string }> = {
+  Columbia: { bg: '#9BCBEB', fg: '#002A5C' },
+  NYU: { bg: '#57068C', fg: '#FFFFFF' },
+  SVA: { bg: '#CC0000', fg: '#FFFFFF' },
+  'Cooper Union': { bg: '#C8A951', fg: '#000000' },
+  FIT: { bg: '#003DA5', fg: '#FFFFFF' },
+  Parsons: { bg: '#E82E21', fg: '#FFFFFF' },
+};
+
+export const ALL_CAMPUSES_COLOR = { bg: '#000000', fg: '#FFFFFF' };
+
+export function visibilityColor(visibility: string): { bg: string; fg: string } {
+  if (visibility === ALL_CAMPUSES) return ALL_CAMPUSES_COLOR;
+  return (schoolColors as Record<string, { bg: string; fg: string }>)[visibility] ?? ALL_CAMPUSES_COLOR;
+}
