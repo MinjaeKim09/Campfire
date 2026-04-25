@@ -59,3 +59,16 @@ export const communitySections = [
     description: 'KSA promotions, gatherings, and community notices.',
   },
 ] as const;
+
+export const postCategories = [
+  'Class tips',
+  'School community',
+  'Sublets',
+  'Clubs',
+  'Events',
+  'KSA',
+] as const;
+export type PostCategory = (typeof postCategories)[number];
+
+export const ALL_CAMPUSES = 'All campuses' as const;
+export type Visibility = typeof ALL_CAMPUSES | School;
