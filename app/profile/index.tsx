@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { campfireTheme } from '@/src/constants/theme';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { supabase } from '@/src/lib/supabase';
-import { campfireTheme } from '@/src/constants/theme';
 
 type Stats = { posts: number; comments: number; likes: number };
 
@@ -179,33 +179,52 @@ export default function ProfileScreen() {
         </Pressable>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: campfireTheme.colors.lavender }]}>
-              <Ionicons name="document-text-outline" size={18} color={campfireTheme.colors.black} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/profile/posts')}
+            style={({ pressed }) => [styles.statCard, pressed && styles.statCardPressed]}>
+            <View style={styles.statTopRow}>
+              <View style={[styles.statIcon, { backgroundColor: campfireTheme.colors.lavender }]}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={18}
+                  color={campfireTheme.colors.black}
+                />
+              </View>
             </View>
             <Text style={styles.statValue}>{stats.posts}</Text>
             <Text style={styles.statLabel}>Posts</Text>
-          </View>
+          </Pressable>
 
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: campfireTheme.colors.cardMuted }]}>
-              <Ionicons
-                name="chatbubble-outline"
-                size={18}
-                color={campfireTheme.colors.emberOrange}
-              />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/profile/comments')}
+            style={({ pressed }) => [styles.statCard, pressed && styles.statCardPressed]}>
+            <View style={styles.statTopRow}>
+              <View style={[styles.statIcon, { backgroundColor: campfireTheme.colors.cardMuted }]}>
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={18}
+                  color={campfireTheme.colors.emberOrange}
+                />
+              </View>
             </View>
             <Text style={styles.statValue}>{stats.comments}</Text>
             <Text style={styles.statLabel}>Comments</Text>
-          </View>
+          </Pressable>
 
-          <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: '#FFE3CC' }]}>
-              <Ionicons name="flame" size={18} color={campfireTheme.colors.emberOrange} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/profile/fires')}
+            style={({ pressed }) => [styles.statCard, pressed && styles.statCardPressed]}>
+            <View style={styles.statTopRow}>
+              <View style={[styles.statIcon, { backgroundColor: '#FFE3CC' }]}>
+                <Ionicons name="flame" size={18} color={campfireTheme.colors.emberOrange} />
+              </View>
             </View>
             <Text style={styles.statValue}>{stats.likes}</Text>
             <Text style={styles.statLabel}>Fires</Text>
-          </View>
+          </Pressable>
         </View>
 
         <Pressable onPress={confirmSignOut} style={styles.signOutBtn}>
@@ -338,11 +357,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 16,
+    paddingHorizontal: 8,
     backgroundColor: campfireTheme.colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: campfireTheme.colors.border,
     gap: 6,
+  },
+  statCardPressed: { opacity: 0.82 },
+  statTopRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statIcon: {
     width: 36,
