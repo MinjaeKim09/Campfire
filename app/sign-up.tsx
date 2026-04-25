@@ -115,7 +115,7 @@ export default function SignUpScreen() {
 
       {step === 'form' ? (
         <View style={styles.body}>
-          <Text style={styles.kicker}>Campus only</Text>
+          <Text style={styles.brand}>Campfire</Text>
           <Text style={styles.title}>Use your school email.</Text>
           <Text style={styles.subtitle}>
             We support .edu emails from these schools:
@@ -243,18 +243,11 @@ const styles = StyleSheet.create({
   headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '900', color: campfireTheme.colors.ink },
   body: { flex: 1, padding: 24, gap: 8 },
-  kicker: {
-    alignSelf: 'flex-start',
-    borderRadius: campfireTheme.radius.pill,
-    backgroundColor: campfireTheme.colors.lavender,
-    color: campfireTheme.colors.black,
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    textTransform: 'uppercase',
-    overflow: 'hidden',
+  brand: {
+    fontFamily: 'BagelFatOne_400Regular',
+    fontSize: 44,
+    color: '#F36907',
+    letterSpacing: -0.5,
     marginBottom: 8,
   },
   title: {
