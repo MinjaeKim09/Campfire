@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const fallbackSupabaseUrl = 'https://placeholder.supabase.co';
 const fallbackSupabasePublishableKey = 'placeholder-publishable-key';
+const canPersistSession = Platform.OS !== 'web' || typeof window !== 'undefined';
 
 if (!supabaseUrl || !supabasePublishableKey) {
   console.warn(
@@ -18,9 +20,9 @@ export const supabase = createClient(
   supabasePublishableKey ?? fallbackSupabasePublishableKey,
   {
     auth: {
-      storage: AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
+      ...(canPersistSession ? { storage: AsyncStorage } : {}),
+      autoRefreshToken: canPersistSession,
+      persistSession: canPersistSession,
       detectSessionInUrl: false,
     },
   }
