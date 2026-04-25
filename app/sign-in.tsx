@@ -95,6 +95,17 @@ export default function SignInScreen() {
             style={[styles.submit, !canSubmit && styles.submitDisabled]}>
             <Text style={styles.submitText}>{submitting ? 'Signing in…' : 'Sign in'}</Text>
           </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              router.replace('/sign-up');
+            }}
+            style={styles.signUpLink}>
+            <Text style={styles.signUpText}>
+              No account? <Text style={styles.signUpAction}>Sign up with school email</Text>
+            </Text>
+          </Pressable>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -165,4 +176,14 @@ const styles = StyleSheet.create({
   },
   submitDisabled: { backgroundColor: campfireTheme.colors.border },
   submitText: { color: campfireTheme.colors.card, fontSize: 16, fontWeight: '900' },
+  signUpLink: { marginTop: 18, alignItems: 'center' },
+  signUpText: {
+    fontSize: 13,
+    color: campfireTheme.colors.mutedInk,
+    fontWeight: '600',
+  },
+  signUpAction: {
+    color: campfireTheme.colors.hotPink,
+    fontWeight: '900',
+  },
 });

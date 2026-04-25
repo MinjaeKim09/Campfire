@@ -89,3 +89,24 @@ export function visibilityColor(visibility: string): { bg: string; fg: string } 
   if (visibility === ALL_CAMPUSES) return ALL_CAMPUSES_COLOR;
   return (schoolColors as Record<string, { bg: string; fg: string }>)[visibility] ?? ALL_CAMPUSES_COLOR;
 }
+
+// Map an .edu email domain to a School. Sub-domains like @stern.nyu.edu also map.
+export const schoolDomains: { suffix: string; school: School }[] = [
+  { suffix: 'columbia.edu', school: 'Columbia' },
+  { suffix: 'sva.edu', school: 'SVA' },
+  { suffix: 'cooper.edu', school: 'Cooper Union' },
+  { suffix: 'fitnyc.edu', school: 'FIT' },
+  { suffix: 'newschool.edu', school: 'Parsons' },
+  { suffix: 'nyu.edu', school: 'NYU' },
+];
+
+export function schoolFromEmail(email: string): School | null {
+  const lower = email.trim().toLowerCase();
+  const at = lower.lastIndexOf('@');
+  if (at === -1) return null;
+  const domain = lower.slice(at + 1);
+  for (const { suffix, school } of schoolDomains) {
+    if (domain === suffix || domain.endsWith('.' + suffix)) return school;
+  }
+  return null;
+}

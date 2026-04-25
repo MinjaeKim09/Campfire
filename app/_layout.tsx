@@ -32,6 +32,10 @@ export default function RootLayout() {
             options={{ presentation: 'modal', headerShown: false }}
           />
           <Stack.Screen
+            name="sign-up"
+            options={{ presentation: 'modal', headerShown: false }}
+          />
+          <Stack.Screen
             name="pick-school"
             options={{ presentation: 'modal', headerShown: false }}
           />
